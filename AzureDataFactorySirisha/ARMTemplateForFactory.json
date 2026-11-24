@@ -1,0 +1,422 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AzureDataFactorySirisha"
+		},
+		"linkazurekeyvault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://caresynckeyvaults.vault.azure.net/"
+		},
+		"linkazuresqldb_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "deprojectserver.database.windows.net"
+		},
+		"linkazuresqldb_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "DE"
+		},
+		"linkazuresqldb_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "deprojectserveradmin"
+		},
+		"linkpostgresql_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "ep-misty-forest-bdvzc0xk-pooler.c-8.us-east-2.aws.neon.tech"
+		},
+		"linkpostgresql_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "neondb"
+		},
+		"linkpostgresql_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "neondb_owner"
+		},
+		"linksourcede_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://adlssirisha.dfs.core.windows.net/"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Source_To_Silver_Inner')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ReadTableDetails",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 2,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT * FROM ctrl.table_config WHERE table_id=@{pipeline().parameters.table_id}",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"table_id": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Source_To_Silver_Main')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Read Source Table List",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 2,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT * FROM ctrl.table_config WHERE is_active=1 and source_system='@{pipeline().parameters.source_system}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Read all tables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Read Source Table List",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Read Source Table List').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Set variable1",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "Test",
+										"value": {
+											"value": "@string(item().table_id)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"source_system": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"Test": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Test')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "PostgreSqlV2Source",
+								"query": "SELECT * FROM PUBLIC.doctors;",
+								"queryTimeout": "02:00:00"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_postgresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_parquest",
+								"type": "DatasetReference",
+								"parameters": {
+									"Container": "landing",
+									"Folder": "test"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_postgresql')]",
+				"[concat(variables('factoryId'), '/datasets/ds_parquest')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkazuresqldb",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/linkazuresqldb')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_parquest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linksourcede",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string"
+					},
+					"Folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/linksourcede')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_postgresql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "linkpostgresql",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "PostgreSqlV2Table",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/linkpostgresql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/linkazurekeyvault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('linkazurekeyvault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/linkazuresqldb')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('linkazuresqldb_properties_typeProperties_server')]",
+					"database": "[parameters('linkazuresqldb_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('linkazuresqldb_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "linkazurekeyvault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "azuresqldbpassword"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/linkazurekeyvault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/linkpostgresql')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "PostgreSqlV2",
+				"typeProperties": {
+					"server": "[parameters('linkpostgresql_properties_typeProperties_server')]",
+					"port": 5432,
+					"database": "[parameters('linkpostgresql_properties_typeProperties_database')]",
+					"username": "[parameters('linkpostgresql_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "linkazurekeyvault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "postgre-password-sql"
+					},
+					"sslMode": 2,
+					"authenticationType": "Basic"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/linkazurekeyvault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/linksourcede')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('linksourcede_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

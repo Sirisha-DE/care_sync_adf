@@ -1,0 +1,33 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "AzureDataFactorySirisha"
+		},
+		"linkazurekeyvault_properties_typeProperties_baseUrl": {
+			"value": "https://caresynckeyvaults.vault.azure.net/"
+		},
+		"linkazuresqldb_properties_typeProperties_server": {
+			"value": "deprojectserver.database.windows.net"
+		},
+		"linkazuresqldb_properties_typeProperties_database": {
+			"value": "DE"
+		},
+		"linkazuresqldb_properties_typeProperties_userName": {
+			"value": "deprojectserveradmin"
+		},
+		"linkpostgresql_properties_typeProperties_server": {
+			"value": "ep-misty-forest-bdvzc0xk-pooler.c-8.us-east-2.aws.neon.tech"
+		},
+		"linkpostgresql_properties_typeProperties_database": {
+			"value": "neondb"
+		},
+		"linkpostgresql_properties_typeProperties_username": {
+			"value": "neondb_owner"
+		},
+		"linksourcede_properties_typeProperties_url": {
+			"value": "https://adlssirisha.dfs.core.windows.net/"
+		}
+	}
+}
