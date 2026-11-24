@@ -1,0 +1,10 @@
+{
+	"name": "linksourcede",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://adlssirisha.dfs.core.windows.net/"
+		}
+	}
+}
