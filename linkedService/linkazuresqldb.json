@@ -1,0 +1,23 @@
+{
+	"name": "linkazuresqldb",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "deprojectserver.database.windows.net",
+			"database": "DE",
+			"encrypt": "mandatory",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "deprojectserveradmin",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "linkazurekeyvault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "azuresqldbpassword"
+			}
+		}
+	}
+}
